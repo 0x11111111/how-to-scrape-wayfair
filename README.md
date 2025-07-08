@@ -1,266 +1,76 @@
-# How to Scrape Product Data From Wayfair: A Step-by-Step Guide
+# How to Scrape Product Data From Wayfair
 
-[![Wayfair ](https://raw.githubusercontent.com/oxylabs/how-to-scrape-wayfair/refs/heads/main/Wayfair-Scraper-API-1090x275.png)](https://oxylabs.io/products/scraper-api/ecommerce/wayfair?utm_source=877&utm_medium=affiliate&groupid=877&utm_content=wayfair-github&transaction_id=102f49063ab94276ae8f116d224b67)
+这个仓库fork自[这里](https://github.com/oxylabs/how-to-scrape-wayfair)，若欲学习详细请移步。
 
-[![](https://dcbadge.vercel.app/api/server/eWsVUJrnG5)](https://discord.gg/GbxmdGhZjq)
+This repo is forked from this [source](https://github.com/oxylabs/how-to-scrape-wayfair), please refer to it to learn the details.
 
-## Introduction
+这个fork主要是为了爬取Wayfair的某商品搜索信息，将爬取的搜索结果保存至本地并输出搜索的具体信息，包括商品名，当前价格，原价，评分，评价数，商品链接和商品图片链接。
 
-The following Python tutorial will explore how to scrape data from Wayfair using [<u>Oxylabs Wayfair Scraper API</u>](https://oxylabs.io/products/scraper-api/ecommerce/wayfair). Read on for the page layout overview, project environment preparation, fetching the Wayfair product page for data extraction, and export to CSV or JSON format.
+This fork is intended to scrape the search result of Wayfair. It saves the search result to local and gives the name, current_price, original_price, rating, review_count, product_url and image_url.
 
-## Overview of Wayfair page layout
+## Preparation
 
-Before getting technical, let’s analyze the Wayfair page layout. Here are some of the most relevant types.
+在[Oxylabs](https://oxylabs.io/)注册账号，这个网站提供了API，用作爬取Wayfair的代理，以防被Wayfair反爬虫。
+网站提供了7天内5000条爬取记录的免费试用，可以用这个试用额度测试爬取结果。
 
-### 1. Search result page
+### Sign up and purchase free plan
 
-The search result page appears when searching for products. For example, if you search for the term Sofa, the search result will be similar to the one below:
+注册Oxylabs网站后，在这个[页面](https://dashboard.oxylabs.io/en/overview/My%20account/Products)购买免费的Web Scraper API。
+![purchase-oxylabs](images/purchase-oxylabs.png "purchase oxylabs plan")
 
-![search result](images/Wayfair_search_results.png)
+### Setup Web Scraper API
 
-You can extract all the products listed for the search term “Sofa” as well as their links, titles, prices, ratings, and images. 
+购买成功后，会要求填写API的名称和密码，请记住密码。API名称后续可以在[这里](https://dashboard.oxylabs.io/en/overview/scraper/users)查阅。
 
-### 2. Product listing page
+## Installation
 
-Product listing appears when you click on a product to see the details. It shows all the product information in addition to the main data already visible on the search result page.
+### Clone this repo
 
-![product](images/wayfair_product_page.png)
+克隆本项目到本地，需要本地安装好[git](https://git-scm.com/)。
 
-### 3. reCAPTCHA protection page
+`git clone https://github.com/0x11111111/how-to-scrape-wayfair`
 
-The reCAPTCHA protection page appears when Wayfair detects unusual browsing behavior, such as repeated or too-fast (for an organic user) navigation from page to page, indicating the use of automated scripts such as scrapers. The page looks similar to the one below:
+或者直接下载好项目的[压缩包](https://github.com/0x11111111/how-to-scrape-wayfair/archive/refs/heads/main.zip)并解压。
 
-![recaptcha](images/recaptcha_protection.png)
+### Install dependencies
 
-Now, let’s see how to use Oxylabs Wayfair API to extract data from the Wayfair product page.
+假设你已经安装好Python(3.11以上)并将其加入了系统Path。在命令行执行以下：
 
-## Step 1 - setting up the project environment
+`pip install requests beautifulsoup4 pandas`
 
-To begin scraping Wayfair data, prepare the project environment. If you already have Python installed, you can skip the Python installation and only install the dependencies in your active Python environment.
+## Data Scraping
 
-### Installing Python
+* 随后在info.json中username和password填入上述过程得到的**Oxylabs**的账号密码，注意**不是Wayfair**的。本项目是通过Oxylabs的代理来绕过Wayfair的爬虫限制，从而抓取数据的。
+    在Wayfair搜索后，地址栏连接就是需要爬取的连接，在info.json的product_url填入这个链接。
 
-This tutorial is written using Python 3.11.2. However, it should also work with the older or latest version of Python 3. You can download the latest version of Python from the oﬃcial web page.
+* 以这个椅子的搜索为例：
+    ![example-chair-search](images/example-chair-search.png "example of searching chair")
+    其链接为https://www.wayfair.com/furniture/sb0/kitchen-dining-chairs-c46130.html，将其填写到info.json中product_url字段。
 
-### Installing dependencies
+* 随后执行脚本
 
-Once you have downloaded and installed Python,  install the following dependencies by executing the command below in the terminal or command prompt:
+    `python src/wayfair_scraper.py`
 
-```bash
-python -m pip install requests bs4 pandas
-```
+* 等待一段时间后，如果输出如下信息则为爬取成功：
 
-This command will install Requests, Beautiful Soup, and Pandas libraries. These modules will interact with the API and store data.
+    ```log
+    [INFO] Found 61 ListingCards, saving to ListingCards_20250708_133943
+    [DONE] Data written to ListingCards_20250708_133943\cards_data.csv
+    ```
+* 脚本会在本地目录创建类似名称为`ListingCards_20250708_133943`这个文件夹，其中包含了三种内容：
+  
+  1. product_page_*_*.html | 这是抓取到是搜索页面的源码html，用于解析搜索结果。
+  2. card_*.txt | 这是搜索页每个商品项目提取出来的细节，对应抓取到的html中的每个`ListingCard`，每个就是一个商品
+  3. cards_data.csv | 汇总这个搜索结果，包括了商品名，当前价格，原价，评分，评价数，商品链接和商品图片链接。
 
-## Step 2 - Fetching product data
+## P.S.
 
-Here’s a target [product page](https://www.wayfair.com/furniture/pdp/ebern-designs-adryel-98-wide-microfibermicrosuede-right-hand-facing-sofa-chaise-w003629953.html). Use Wayfair Scraper API to fetch Wayfair product data and parse it using the Beautiful Soup library. Alternatively, instead of relying on the Beautiful Soup library, you can also parse Wayfair using [Custom Parser](https://developers.oxylabs.io/scraper-apis/custom-parser), a free feature available with all Scraper APIs.
+因为采用了第三方代理搜索，其结果和网页搜索结果有出入，表现为商品名称、数量、顺序不同。但是都是可以在Wayfair上检索到同名商品的，信息也正确的。如果需要爬取更多搜索结果、更多的抓取条目，本项目仅仅是抛砖引玉，就不做展开了。
 
-### Wayfair Scraper API overview
+其他更复杂需求可以在本项目基础上做延伸修改，或者可以考虑使用Oxylabs的[Python-sdk](https://github.com/oxylabs/oxylabs-sdk-python)做更深入处理，他们包装了很多数据抓取的请求，可以实现更加方便的检索和爬取。
 
-Before starting, let’s discuss some of the most useful query parameters of Wayfair Scraper API.
+如果项目有问题，欢迎提出PR。
 
-You can scrape Wayfair by providing any Wayfair URL. You will only have to pass two required parameters: `url` and `source`. The `source` parameter must be set to `universal`, and the `url` should be a Wayfair web page URL. Find additional information about [forming Wayfair URLs](https://developers.oxylabs.io/scraper-apis/e-commerce-scraper-api/all-domains#forming-urls) in our documentation.
+## Acknowledgement
 
-It also takes optional parameters such as `user_agent_type` and `callback_url`. The `user_agent_type` tells the API which device the user agent will use (e.g., desktop). Lastly, the `callback_url` parameter is used to specify a URL to which the server should send a response after processing the request. Take a look at an example of a payload:
-
-```python
-payload = {
-    "source": "universal",
-    "url": "https://www.wayfair.com/furniture/pdp/ebern-designs-adryel-98-wide-microfibermicrosuede-right-hand-facing-sofa-chaise-w003629953.html",
-    "user_agent_type": "desktop",
-    "callback_url": "<URL to your callback endpoint.>"
-}
-```
-
-### Sending network requests
-
-To start writing your Wayfair scraper, import the libraries and create a payload with the necessary variables. Since Wayfair uses JavaScript rendering to display prices dynamically, you should also use our Headless Browser to render JavaScript and wait for the price element to load.
-
-```python
-import requests
-from bs4 import BeautifulSoup
-
-product_url = "https://www.wayfair.com/furniture/pdp/ebern-designs-adryel-98-wide-microfibermicrosuede-right-hand-facing-sofa-chaise-w003629953.html"
-payload = {
-    "source": "universal",
-    "url": product_url,
-    "user_agent_type": "desktop_safari",
-    "geo_location": "United States",
-    "render": "html",
-    "browser_instructions": [
-        {
-            "type": "wait_for_element",
-            "selector": {
-                "type": "css",
-                "value": "div.SFPrice span.oakhm64z_6112"
-            },
-            "timeout_s": 10
-        }
-    ]
-}
-
-username = "USERNAME"
-password = "PASSWORD"
-```
-
-Notice `username`, `password`, and `product_url` variables. You will have to use your Oxylabs sub-user’s username and password. Also, if you wish, you can replace the `product_url` with the desired URL.
-
-Next, send a POST request using the Requests module to Oxylabs' realtime API endpoint: <https://realtime.oxylabs.io/v1/queries>.
-
-```python
-response = requests.post(
-    "https://realtime.oxylabs.io/v1/queries",
-    auth=(username, password),
-    json=payload,
-    timeout=180
-)
-print(response.status_code)
-```
-
-In the code above, the POST method of the Requests module is used to send a POST request to the API. The sub-user’s credentials are passed for authentication, and the payload is sent in JSON format.
-
-If you run this code, you’ll see `200` as an output which indicates success. If you get any other status code, recheck your credentials and payload.
-
-## Step 3 - Parsing data
-
-Now, you can parse the content of the JSON response. The JSON object will have the content of the webpage in HTML format. Use BeautifulSoup to parse the HTML from the response:
-
-```python
-content = response.json()["results"][0]["content"]
-soup = BeautifulSoup(content, "html.parser")
-```
-
-The default `html.parser` is in use. You can use a different parser if you want.
-
-The `soup object` has the parsed HTML content. Now, parse the title, price, and rating from this object.
-
-### Title
-
-Using a browser, inspect the HTML properties of the product title. To open the inspect tab, right-click on the product title and click "inspect". You’ll see something similar to the image below:
-
-![title](images/wayfair_product_page_title.png)
-
-According to the HTML property, write the following code to extract the title of this product:
-
-```python
-title = soup.find("h1", {"data-hb-id": "Heading"}).text
-```
-
-### Price
-
-Inspect the price element and find the proper class attributes:
-
-![price](images/wayfair_product_page_inspect.png)
-
-```python
-price = soup.find("div", {"class": "SFPrice"}).find("span", {"class": "oakhm64z_6112"}).text
-```
-
-### Rating
-
-Similarly, you can parse the rating element with the following code:
-
-```python
-rating = soup.find("span", {"class": "ProductRatingNumberWithCount-rating"}).text
-```
-
-The class attribute of the `span` element is used to identify the rating element and extract the text content.
-
-## Step 4 - Exporting data
-
-The product data is now parsed. Use Pandas to export the data in CSV and JSON formats. Next, create a list of dict objects with the parsed data and create a data frame:
-
-```python
-import pandas as pd
-data = [{
-   "Product Title": title,
-   "Price": price,
-   "Rating": rating,
-   "Link": product_url,
-}]
-df = pd.DataFrame(data)
-```
-
-### Exporting data in CSV
-
-Using the data frame object, export the data in a CSV file with a single line of code. Since you don’t need an index, set the index to `False`.
-
-```python
-df.to_csv("product_data.csv", index=False)
-```
-
-Once you execute this function, the script will create a file named "product_data.csv".
-
-### Exporting data in JSON
-
-Similarly, use the data frame to export the data in JSON format. Pass an additional parameter, `orient`, to indicate the need for JSON data in records format.
-
-```python
-df.to_json("product_data.json", orient="records")
-```
-Here's the full Wayfair product scraper code:
-```python
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-
-product_url = "https://www.wayfair.com/furniture/pdp/ebern-designs-adryel-98-wide-microfibermicrosuede-right-hand-facing-sofa-chaise-w003629953.html"
-payload = {
-    "source": "universal",
-    "url": product_url,
-    "user_agent_type": "desktop_safari",
-    "geo_location": "United States",
-    "render": "html",
-    "browser_instructions": [
-        {
-            "type": "wait_for_element",
-            "selector": {
-                "type": "css",
-                "value": "div.SFPrice span.oakhm64z_6112"
-            },
-            "timeout_s": 10
-        }
-    ]
-}
-
-username = "USERNAME"
-password = "PASSWORD"
-
-response = requests.post(
-    "https://realtime.oxylabs.io/v1/queries",
-    auth=(username, password),
-    json=payload,
-    timeout=180
-)
-print(response.status_code)
-
-content = response.json()["results"][0]["content"]
-soup = BeautifulSoup(content, "html.parser")
-
-title = soup.find("h1", {"data-hb-id": "Heading"}).text
-price = soup.find("div", {"class": "SFPrice"}).find("span", {"class": "oakhm64z_6112"}).text
-rating = soup.find("span", {"class": "ProductRatingNumberWithCount-rating"}).text
-
-data = [{
-   "Product Title": title,
-   "Price": price,
-   "Rating": rating,
-   "Link": product_url,
-}]
-df = pd.DataFrame(data)
-df.to_csv("product_data.csv", index=False)
-df.to_json("product_data.json", orient="records")
-```
-
-The script will create another file named "product_data.json" in the current folder containing the exports:
-```json
-[{"Product Title":"Adryel 2 - Piece Upholstered Sectional","Price":"$489.99","Rating":"4.1 ","Link":"https:\/\/www.wayfair.com\/furniture\/pdp\/ebern-designs-adryel-98-wide-microfibermicrosuede-right-hand-facing-sofa-chaise-w003629953.html"}]
-```
-
-## Conclusion
-
-Building a scraper that can send requests as an actual browser and mimic human browsing behavior is quite difficult. Also, you would have to maintain it and keep it up to date with constant changes. Such micromanagement requires in-depth knowledge and extensive scraping experience.
-
-With Wayfair Scraper API, you can shift your focus where it matters most - data analysis - instead of dealing with technicalities. 
-
+Oxylabs为爬虫提供了一些不错的包装，可以省去一些反爬虫的麻烦。后续可以深入研究一下。
